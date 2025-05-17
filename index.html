@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDF Merge Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f7f9fc;
+    }
+    .container {
+      max-width: 500px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type="number"], input[type="file"], button {
+      display: block;
+      width: 100%;
+      margin-bottom: 15px;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      font-size: 16px;
+    }
+    label {
+      margin-bottom: 5px;
+      display: block;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>Merge PDFs</h2>
+  <label for="pdfCount">Number of PDFs to merge:</label>
+  <input type="number" id="pdfCount" min="1" max="10" value="2" />
+  <button onclick="generateUploadFields()">Next</button>
+  <form id="uploadForm">
+    <div id="fileInputs"></div>
+    <button type="button" onclick="mergePDFs()">Merge PDFs</button>
+  </form>
+</div>
+
+<script src="pdf-lib.min.js"></script>
+<script>
+  function generateUploadFields() {
+    const count = parseInt(document.getElementById('pdfCount').value);
+    const fileInputsDiv = document.getElementById('fileInputs');
+    fileInputsDiv.innerHTML = '';
+    for (let i = 1; i <= count; i++) {
+      const label = document.createElement('label');
+      label.textContent = 'Upload PDF ' + i + ':';
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'application/pdf';
+      input.required = true;
+      fileInputsDiv.appendChild(label);
+      fileInputsDiv.appendChild(input);
+    }
+  }
+
+  async function mergePDFs() {
+    try {
+      const { PDFDocument } = window.pdfLib;
+      const inputElements = document.querySelectorAll('#fileInputs input[type="file"]');
+      const mergedPdf = await PDFDocument.create();
+
+      for (const input of inputElements) {
+        if (input.files.length === 0) continue;
+        const arrayBuffer = await input.files[0].arrayBuffer();
+        const pdf = await PDFDocument.load(arrayBuffer);
+        const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+        copiedPages.forEach(page => mergedPdf.addPage(page));
+      }
+
+      const mergedPdfFile = await mergedPdf.save();
+      const blob = new Blob([mergedPdfFile], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'merged.pdf';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      alert('Error merging PDFs: ' + error);
+      console.error(error);
+    }
+  }
+</script>
+</body>
+</html>
